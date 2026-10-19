@@ -1007,8 +1007,15 @@ function touchDistance(t0, t1) {
     return Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
 }
 
+function touchAngle(t0, t1) {
+    return Math.atan2(t1.clientY - t0.clientY, t1.clientX - t0.clientX);
+}
 let pinchStartDist = 0;
 let pinchStartZoom = 1;
+const TWIST_DEAD_ZONE = (4 * Math.PI) / 180;
+let twistLastAngle = 0;
+let twistTotal = 0;
+let twisting = false;
 
 container.addEventListener("touchstart", (e) => {
     if (!STATE.isRunning) return;
@@ -1024,6 +1031,9 @@ container.addEventListener("touchstart", (e) => {
         lastMouseY = mid.y;
         pinchStartDist = touchDistance(e.touches[0], e.touches[1]);
         pinchStartZoom = currentZoom;
+        twistLastAngle = touchAngle(e.touches[0], e.touches[1]);
+        twistTotal = 0;
+        twisting = false;
         e.preventDefault();
         return;
     }
@@ -1051,6 +1061,14 @@ container.addEventListener("touchmove", (e) => {
         if (pinchStartDist > 0) {
             setZoom(pinchStartZoom * (dist / pinchStartDist));
         }
+        const angle = touchAngle(e.touches[0], e.touches[1]);
+        let dAngle = angle - twistLastAngle;
+        if (dAngle > Math.PI) dAngle -= 2 * Math.PI;
+        else if (dAngle < -Math.PI) dAngle += 2 * Math.PI;
+        twistLastAngle = angle;
+        twistTotal += dAngle;
+        if (!twisting && Math.abs(twistTotal) > TWIST_DEAD_ZONE) twisting = true;
+        if (twisting) orbitCamera(-dAngle);
         e.preventDefault();
         return;
     }

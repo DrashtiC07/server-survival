@@ -145,6 +145,49 @@ describe("two fingers pan and zoom the camera together", () => {
         expect(internetPos()).toEqual(before);
     });
 });
+// Fingers 200px apart, centred on (400, 300), their line tilted by `deg` degrees.
+// Only the angle changes between calls, so pan and zoom stay put.
+function fingersAt(deg) {
+    const rad = (deg * Math.PI) / 180;
+    const dx = Math.cos(rad) * 100;
+    const dy = Math.sin(rad) * 100;
+    return [touch(1, 400 - dx, 300 - dy), touch(2, 400 + dx, 300 + dy)];
+}
+
+describe("twisting two fingers rotates the view, like Q and E (#314)", () => {
+    it("a twist orbits the camera", () => {
+        const before = { x: camera.position.x, z: camera.position.z };
+
+        container().dispatchEvent(touchEvent("touchstart", fingersAt(0)));
+        container().dispatchEvent(touchEvent("touchmove", fingersAt(45)));
+
+        expect(camera.position.x !== before.x || camera.position.z !== before.z).toBe(true);
+    });
+
+    it("a plain pinch does not rotate it", () => {
+        const before = { x: camera.position.x, z: camera.position.z };
+
+        container().dispatchEvent(
+            touchEvent("touchstart", [touch(1, 350, 300), touch(2, 450, 300)])
+        );
+        container().dispatchEvent(
+            touchEvent("touchmove", [touch(1, 250, 300), touch(2, 550, 300)])
+        );
+
+        expect(camera.position.x).toBeCloseTo(before.x, 5);
+        expect(camera.position.z).toBeCloseTo(before.z, 5);
+    });
+
+    it("a wobble inside the dead zone does not rotate it", () => {
+        const before = { x: camera.position.x, z: camera.position.z };
+
+        container().dispatchEvent(touchEvent("touchstart", fingersAt(0)));
+        container().dispatchEvent(touchEvent("touchmove", fingersAt(2)));
+
+        expect(camera.position.x).toBeCloseTo(before.x, 5);
+        expect(camera.position.z).toBeCloseTo(before.z, 5);
+    });
+});
 
 // raycastHits (built for pointer-release.test.mjs, #288) lets the stub
 // resolve a touch to a REAL service instead of always falling through to
